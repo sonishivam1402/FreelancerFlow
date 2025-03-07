@@ -1,44 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaCopy } from 'react-icons/fa';
 import '../styles/EmailTemplates.css';
+import { collection, addDoc, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 
 const EmailTemplates = () => {
-  const [templates, setTemplates] = useState([
-    {
-      id: 1,
-      name: 'Initial Response',
-      subject: 'Re: {project_type} Project Inquiry',
-      body: `Hi {client_name},
-
-Thank you for reaching out about your {project_type} project. I'd love to learn more about what you're looking to achieve.
-
-Could you please provide more details about:
-- Your project timeline
-- Budget range
-- Key features/requirements
-
-I'll get back to you with a detailed proposal once I have this information.
-
-Best regards,
-{user_name}`,
-      lastModified: '2024-03-10'
-    },
-    {
-      id: 2,
-      name: 'Follow-up 1',
-      subject: 'Following up: {project_type} Project Discussion',
-      body: `Hi {client_name},
-
-I hope you're doing well. I'm following up on our previous conversation about the {project_type} project.
-
-I'm still very interested in helping you bring this project to life. Would you like to schedule a quick call to discuss the details?
-
-Best regards,
-{user_name}`,
-      lastModified: '2024-03-09'
-    }
-  ]);
-
+  const [templates, setTemplates] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
 
@@ -56,23 +23,81 @@ Best regards,
     setShowForm(true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingTemplate) {
-      setTemplates(templates.map(t => 
-        t.id === editingTemplate.id ? { ...formData, lastModified: new Date().toISOString().split('T')[0] } : t
-      ));
-    } else {
-      setTemplates([...templates, {
-        ...formData,
-        id: templates.length + 1,
-        lastModified: new Date().toISOString().split('T')[0]
-      }]);
+  const fetchTemplates = async () => {
+    try {
+      const templatesRef = collection(db, 'emailTemplates');
+      const querySnapshot = await getDocs(templatesRef);
+      const templatesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log('Fetched templates:', templatesData);
+      setTemplates(templatesData);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
     }
-    setShowForm(false);
-    setFormData(initialFormState);
-    setEditingTemplate(null);
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingTemplate) {
+        await updateDoc(doc(db, 'emailTemplates', editingTemplate.id), {
+          ...formData,
+          lastModified: new Date().toISOString()
+        });
+      } else {
+        await addDoc(collection(db, 'emailTemplates'), {
+          ...formData,
+          lastModified: new Date().toISOString()
+        });
+      }
+      fetchTemplates();
+      setShowForm(false);
+      setFormData(initialFormState);
+      setEditingTemplate(null);
+    } catch (error) {
+      console.error('Error saving template:', error);
+    }
+  };
+
+  const initializeDefaultTemplates = async () => {
+    try {
+      const templatesRef = collection(db, 'emailTemplates');
+      const defaultTemplates = [
+        {
+          name: 'Initial Response',
+          subject: 'Thank you for your inquiry',
+          body: `Dear {{clientName}},
+
+Thank you for reaching out to us. We have received your inquiry and will review it shortly.
+
+We typically respond within 24-48 hours with a detailed response.
+
+Best regards,
+{{userName}}
+{{userCompany}}`,
+          lastModified: new Date().toISOString()
+        }
+      ];
+
+      const q = query(templatesRef, where('name', '==', 'Initial Response'));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        for (const template of defaultTemplates) {
+          await addDoc(templatesRef, template);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing templates:', error);
+    }
+  };
+
+  useEffect(() => {
+    initializeDefaultTemplates();
+    fetchTemplates();
+  }, []);
 
   return (
     <div className="templates-container">

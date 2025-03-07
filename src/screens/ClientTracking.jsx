@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { FaFilter, FaSearch, FaUserPlus, FaFileExport, FaEye, FaEdit } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaUserPlus, FaFileExport, FaEye, FaEdit, FaEnvelope } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, query, where, getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import '../styles/ClientTracking.css';
 import Notification from '../components/Notification';
+import { sendEmail } from '../utils/emailService';
 
 const ClientTracking = () => {
   const navigate = useNavigate();
@@ -147,6 +148,70 @@ const ClientTracking = () => {
     const nextFollowup = new Date(lastContact);
     nextFollowup.setDate(nextFollowup.getDate() + 2);
     return nextFollowup.toLocaleDateString();
+  };
+
+  const handleSendEmail = async (client) => {
+    try {
+      // Get the logged-in user's details
+      const user = JSON.parse(localStorage.getItem('user'));
+      const userDoc = await getDoc(doc(db, 'Login', user.userId));
+      const userData = userDoc.data();
+
+      // Get the initial response template
+      const templatesRef = collection(db, 'emailTemplates');
+      const q = query(templatesRef, where('name', '==', 'Initial Response'));
+      const templateSnapshot = await getDocs(q);
+      
+      console.log('Template snapshot:', templateSnapshot.docs.map(doc => doc.data()));
+
+      if (templateSnapshot.empty) {
+        throw new Error('Initial Response template not found. Please wait a moment and try again.');
+      }
+
+      const template = templateSnapshot.docs[0].data();
+      console.log('Using template:', template);
+
+      // Replace template variables
+      let emailBody = template.body
+        .replace('{{clientName}}', client.Name)
+        .replace('{{userName}}', userData.name)
+        .replace('{{userCompany}}', userData.company);
+
+      console.log('Prepared email:', {
+        to_email: client.Email,
+        to_name: client.Name,
+        from_name: userData.name,
+        subject: template.subject,
+        message: emailBody
+      });
+
+      const emailParams = {
+        to_email: client.Email,
+        to_name: client.Name,
+        from_name: userData.name,
+        subject: template.subject,
+        message: emailBody
+      };
+
+      await sendEmail(emailParams);
+
+      // Update last_contact in Firestore
+      await updateDoc(doc(db, 'clients', client.id), {
+        last_contact: serverTimestamp()
+      });
+
+      setNotification({
+        type: 'success',
+        message: `Email sent successfully to ${client.Name}`
+      });
+
+    } catch (error) {
+      console.error('Error sending email:', error);
+      setNotification({
+        type: 'error',
+        message: `Failed to send email: ${error.message}`
+      });
+    }
   };
 
   return (
@@ -351,6 +416,13 @@ const ClientTracking = () => {
                           title="Edit Client"
                         >
                           <FaEdit />
+                        </button>
+                        <button 
+                          className="btn-icon"
+                          onClick={() => handleSendEmail(client)}
+                          title="Send Email"
+                        >
+                          <FaEnvelope />
                         </button>
                       </div>
                     </td>
