@@ -6,14 +6,14 @@ import Dashboard from "./screens/Dashboard";
 import FollowUpScheduler from "./screens/FollowUpScheduler";
 import EmailTemplates from "./screens/EmailTemplates";
 // import TemplatesManagement from "./screens/TemplatesManagement";
-// import Settings from "./screens/Settings";
+import Settings from "./screens/Settings";
 import Layout from './components/Layout';
 import "./App.css";
 import ClientDetails from "./screens/ClientDetails";
 import ClientTracking from "./screens/ClientTracking";
-import Settings from "./screens/Settings";
 import ProtectedRoute from './components/ProtectedRoute';
 import Signup from "./screens/Signup";
+import Profile from "./screens/Profile";
 
 function App() {
   return (
@@ -31,6 +31,7 @@ function App() {
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><ClientTracking /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           </Routes>
         </Layout>
       </div>

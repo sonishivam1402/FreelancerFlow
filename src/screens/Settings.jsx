@@ -1,22 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { FaSave, FaBell, FaEnvelope, FaClock, FaKey, FaUser } from 'react-icons/fa';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import React, { useState } from 'react';
+import { FaSave, FaBell, FaEnvelope, FaClock } from 'react-icons/fa';
 import '../styles/Settings.css';
 
 const Settings = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState(null);
-  
   const [settings, setSettings] = useState({
-    profile: {
-      name: '',
-      email: user?.email || '',
-      contact_no: '',
-      company: '',
-      position: ''
-    },
     emailSettings: {
       fromName: '',
       emailSignature: '',
@@ -38,63 +25,10 @@ const Settings = () => {
     }
   });
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, 'Login', user.userId));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setSettings(prev => ({
-            ...prev,
-            profile: {
-              ...prev.profile,
-              fullName: userData.name || '',
-              phone: userData.contact_no || '',
-              company: userData.company || '',
-              position: userData.position || ''
-            }
-          }));
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchUserProfile();
-    }
-  }, [user]);
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setNotification(null);
-    
-    try {
-      await updateDoc(doc(db, 'Login', user.userId), {
-        fullName: settings.profile.fullName,
-        phone: settings.profile.phone,
-        company: settings.profile.company,
-        position: settings.profile.position
-      });
-
-      setNotification({
-        type: 'success',
-        message: 'Settings saved successfully!'
-      });
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      setNotification({
-        type: 'error',
-        message: 'Error saving settings. Please try again.'
-      });
-    }
+    // Handle settings save
   };
-
-  if (loading) {
-    return <div className="loading">Loading settings...</div>;
-  }
 
   return (
     <div className="settings-page">
@@ -105,90 +39,7 @@ const Settings = () => {
         </button>
       </header>
 
-      {notification && (
-        <div className={`notification ${notification.type}`}>
-          {notification.message}
-        </div>
-      )}
-
       <div className="settings-grid">
-        {/* Profile Settings */}
-        <div className="settings-section">
-          <div className="section-header">
-            <FaUser className="section-icon" />
-            <h2>Profile Settings</h2>
-          </div>
-          
-          <div className="form-group">
-            <label>Full Name</label>
-            <input
-              type="text"
-              value={settings.profile.fullName}
-              onChange={(e) => setSettings({
-                ...settings,
-                profile: {
-                  ...settings.profile,
-                  fullName: e.target.value
-                }
-              })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={settings.profile.email}
-              disabled
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Phone</label>
-            <input
-              type="tel"
-              value={settings.profile.phone}
-              onChange={(e) => setSettings({
-                ...settings,
-                profile: {
-                  ...settings.profile,
-                  phone: e.target.value
-                }
-              })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Company</label>
-            <input
-              type="text"
-              value={settings.profile.company}
-              onChange={(e) => setSettings({
-                ...settings,
-                profile: {
-                  ...settings.profile,
-                  company: e.target.value
-                }
-              })}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Position</label>
-            <input
-              type="text"
-              value={settings.profile.position}
-              onChange={(e) => setSettings({
-                ...settings,
-                profile: {
-                  ...settings.profile,
-                  position: e.target.value
-                }
-              })}
-            />
-          </div>
-        </div>
-
         {/* Email Settings */}
         <div className="settings-section">
           <div className="section-header">
