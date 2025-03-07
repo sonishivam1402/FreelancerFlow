@@ -12,6 +12,8 @@ import "./App.css";
 import ClientDetails from "./screens/ClientDetails";
 import ClientTracking from "./screens/ClientTracking";
 import Settings from "./screens/Settings";
+import ProtectedRoute from './components/ProtectedRoute';
+import Signup from "./screens/Signup";
 
 function App() {
   return (
@@ -19,16 +21,16 @@ function App() {
       <div className="App">
         <Layout>
           <Routes>
-            {/* <Route path="/" element={<Login />} /> */}
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            {/* <Route path="/inquiry-setup" element={<InquirySetup />} /> */}
-            <Route path="/follow-up" element={<FollowUpScheduler />} />
-            <Route path="/templates" element={<EmailTemplates />} />
-            {/* <Route path="/templates" element={<TemplatesManagement />} /> */}
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/clients/:id" element={<ClientDetails />} />
-            <Route path="/clients" element={<ClientTracking />} />
+            <Route path="/" element={<Login />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            {/* Other routes should be protected */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/follow-up" element={<ProtectedRoute><FollowUpScheduler /></ProtectedRoute>} />
+            <Route path="/templates" element={<ProtectedRoute><EmailTemplates /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/clients/:id" element={<ProtectedRoute><ClientDetails /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><ClientTracking /></ProtectedRoute>} />
           </Routes>
         </Layout>
       </div>

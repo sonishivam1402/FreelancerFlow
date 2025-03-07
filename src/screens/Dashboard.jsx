@@ -1,180 +1,144 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaEnvelope, FaUserClock, FaChartLine } from "react-icons/fa";
-import "../styles/Dashboard.css";
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { Link } from 'react-router-dom';
+import "../styles/Dashboard.css";
 
 const Dashboard = () => {
-  const [clients, setClients] = useState([
-    {
-      id: 1,
-      name: "John Smith",
-      email: "john@example.com",
-      lastContact: "2024-03-10",
-      nextFollowup: "2024-03-12",
-      status: "Pending",
-      project: "Website Development"
-    },
-    {
-      id: 2,
-      name: "Sarah Johnson",
-      email: "sarah@example.com",
-      lastContact: "2024-03-08",
-      nextFollowup: "2024-03-14",
-      status: "Follow-up 2 Scheduled",
-      project: "Logo Design"
-    },
-    {
-      id: 3,
-      name: "Michael Chen",
-      email: "michael@example.com",
-      lastContact: "2024-03-09",
-      nextFollowup: "2024-03-16",
-      status: "Completed",
-      project: "Brand Identity"
-    },
-    {
-      id: 4,
-      name: "Emma Wilson",
-      email: "emma@example.com",
-      lastContact: "2024-03-11",
-      nextFollowup: "2024-03-13",
-      status: "Follow-up 1 Scheduled",
-      project: "E-commerce Website"
-    },
-    {
-      id: 5,
-      name: "David Brown",
-      email: "david@example.com",
-      lastContact: "2024-03-07",
-      nextFollowup: "2024-03-14",
-      status: "Pending",
-      project: "Mobile App Development"
-    },
-    {
-      id: 6,
-      name: "Lisa Anderson",
-      email: "lisa@example.com",
-      lastContact: "2024-03-05",
-      nextFollowup: "2024-03-12",
-      status: "Responded",
-      project: "UI/UX Design"
-    }
-  ]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    pending: 0,
+    followups: 0,
+    responseRate: 0
+  });
 
-  const [statusFilter, setStatusFilter] = useState("all");
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'clients'));
+        const clientsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          last_contact: doc.data().last_contact?.toDate().toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+        }));
+        
+        setClients(clientsData);
+        
+        // Calculate stats
+        const pending = clientsData.filter(client => client.Status === 'Pending').length;
+        const followups = clientsData.filter(client => client.Status.includes('Follow-up')).length;
+        const responded = clientsData.filter(client => client.Status === 'Responded').length;
+        const responseRate = clientsData.length > 0 
+          ? Math.round((responded / clientsData.length) * 100) 
+          : 0;
 
-  const filteredClients = clients.filter(client => 
-    statusFilter === "all" ? true : client.status === statusFilter
-  );
+        setStats({
+          pending,
+          followups,
+          responseRate
+        });
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching clients:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchClients();
+  }, []);
 
   return (
     <>
-      {/* Main Content */}
-      <header className="content-header">
-        <h1>Client Communications Dashboard</h1>
-        <button className="btn-primary">
-          <FaEnvelope /> New Email
-        </button>
-      </header>
+      {loading ? (
+        <div className="loading">Loading dashboard...</div>
+      ) : (
+        <>
+          {/* Stats Overview */}
+          <div className="stats-container">
+            <div className="stat-card">
+              <div className="stat-icon pending">
+                <FaUserClock />
+              </div>
+              <div className="stat-info">
+                <h3>Pending Responses</h3>
+                <p>{stats.pending}</p>
+              </div>
+            </div>
 
-      {/* Stats Overview */}
-      <div className="stats-container">
-        <div className="stat-card">
-          <div className="stat-icon pending">
-            <FaUserClock />
-          </div>
-          <div className="stat-info">
-            <h3>Pending Responses</h3>
-            <p>3</p>
-          </div>
-        </div>
+            <div className="stat-card">
+              <div className="stat-icon scheduled">
+                <FaEnvelope />
+              </div>
+              <div className="stat-info">
+                <h3>Scheduled Follow-ups</h3>
+                <p>{stats.followups}</p>
+              </div>
+            </div>
 
-        <div className="stat-card">
-          <div className="stat-icon scheduled">
-            <FaEnvelope />
+            <div className="stat-card">
+              <div className="stat-icon responded">
+                <FaChartLine />
+              </div>
+              <div className="stat-info">
+                <h3>Response Rate</h3>
+                <p>{stats.responseRate}%</p>
+              </div>
+            </div>
           </div>
-          <div className="stat-info">
-            <h3>Scheduled Follow-ups</h3>
-            <p>4</p>
-          </div>
-        </div>
 
-        <div className="stat-card">
-          <div className="stat-icon responded">
-            <FaChartLine />
-          </div>
-          <div className="stat-info">
-            <h3>Response Rate</h3>
-            <p>75%</p>
-          </div>
-        </div>
-      </div>
+          {/* Client Tracking Table */}
+          <div className="tracking-section">
+            <div className="section-header">
+              <h2>Recent Client Communications</h2>
+            </div>
 
-      {/* Client Tracking Table */}
-      <div className="tracking-section">
-        <div className="section-header">
-          <h2>Client Communications</h2>
-          <div className="filters">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="status-filter"
-            >
-              <option value="all">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Responded">Responded</option>
-              <option value="Follow-up 1 Scheduled">Follow-up 1</option>
-              <option value="Follow-up 2 Scheduled">Follow-up 2</option>
-            </select>
+            <div className="table-container">
+              <table className="clients-table">
+                <thead>
+                  <tr>
+                    <th>Client Name</th>
+                    <th>Project Type</th>
+                    <th>Last Contact</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.slice(0, 5).map(client => (
+                    <tr key={client.id}>
+                      <td>
+                        <Link to={`/clients/${client.id}`}>
+                          {client.Name}
+                        </Link>
+                      </td>
+                      <td>{client['Project Type']}</td>
+                      <td>{new Date(client.last_contact).toLocaleDateString()}</td>
+                      <td>
+                        <span className={`status-badge ${client.Status.toLowerCase().replace(' ', '-')}`}>
+                          {client.Status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button className="btn-icon" title="Send Email">
+                            <FaEnvelope />
+                          </button>
+                          <button className="btn-icon" title="View History">
+                            <FaChartLine />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-
-        <div className="table-container">
-          <table className="clients-table">
-            <thead>
-              <tr>
-                <th>Client Name</th>
-                <th>Project</th>
-                <th>Email</th>
-                <th>Last Contact</th>
-                <th>Next Follow-up</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map(client => (
-                <tr key={client.id}>
-                  <td>
-                    <Link to={`/clients/${client.id}`}>
-                      {client.name}
-                    </Link>
-                  </td>
-                  <td>{client.project}</td>
-                  <td>{client.email}</td>
-                  <td>{new Date(client.lastContact).toLocaleDateString()}</td>
-                  <td>{new Date(client.nextFollowup).toLocaleDateString()}</td>
-                  <td>
-                    <span className={`status-badge ${client.status.toLowerCase().replace(' ', '-')}`}>
-                      {client.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="btn-icon" title="Send Email">
-                        <FaEnvelope />
-                      </button>
-                      <button className="btn-icon" title="View History">
-                        <FaChartLine />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 };
